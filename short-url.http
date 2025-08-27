@@ -1,0 +1,11 @@
+###
+@short_url_HostAddress = http://localhost:5241
+
+GET {{short_url_HostAddress}}/weatherforecast/
+Accept: application/json
+
+POST {{short_url_HostAddress}}/name/repeat/{name}/
+Accept: application/json
+
+
+###
