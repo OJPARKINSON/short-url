@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/ojparkinson/shortUrl/db"
@@ -27,10 +26,9 @@ type url struct {
 type ShortenHandler struct{}
 
 func (s *ShortenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("hello")
 	if r.Method == http.MethodPost {
 
-		client, dberr := db.Connect()
+		collection, dberr := db.ConnectToCollection()
 		if dberr != nil {
 			fmt.Println("failed to connect to the db: ", dberr)
 		}
@@ -44,7 +42,7 @@ func (s *ShortenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		url := url{Url: reqBody.URL, ShortCode: "abc123", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-		result, insertErr := client.Database(os.Getenv("DB_NAME")).Collection(os.Getenv("COLLECTION_NAME")).InsertOne(context.TODO(), url)
+		result, insertErr := collection.InsertOne(context.TODO(), url)
 		if insertErr != nil {
 			fmt.Println("Error inserting url: ", err)
 			w.WriteHeader(500)
