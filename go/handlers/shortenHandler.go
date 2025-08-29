@@ -128,7 +128,8 @@ func (s *ShortenHandler) UpdateShorten(w http.ResponseWriter, r *http.Request) {
 	update := bson.D{{Key: "$set", Value: bson.D{{Key: "url", Value: reqBody.URL}, {Key: "updatedat", Value: time.Now()}}}}
 	result, err := collection.UpdateOne(context.TODO(), filter, update)
 	if err != nil || !result.Acknowledged {
-		http.Error(w, "Failed to upate url", http.StatusInternalServerError)
+		http.Error(w, "Failed to update url", http.StatusInternalServerError)
+		return
 	}
 
 	getFilter := bson.D{{Key: "shortcode", Value: shortCode}}
