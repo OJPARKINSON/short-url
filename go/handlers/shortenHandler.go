@@ -10,6 +10,7 @@ import (
 
 	"github.com/ojparkinson/shortUrl/db"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 )
 
 type shortenReq struct {
@@ -87,8 +88,11 @@ func (s *ShortenHandler) GetShorten(w http.ResponseWriter, r *http.Request) {
 	var reqBody url
 	result := collection.FindOne(context.TODO(), filter).Decode(&reqBody)
 	if result != nil {
-		w.WriteHeader(400)
-		http.Error(w, "Failed to find the short url", http.StatusNotFound)
+		if result == mongo.ErrNoDocuments {
+			http.Error(w, "Failed to find the short url", http.StatusNotFound)
+		} else {
+			http.Error(w, "Failed to get the document", http.StatusInternalServerError)
+		}
 		return
 	}
 
