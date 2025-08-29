@@ -17,10 +17,10 @@ type shortenReq struct {
 }
 
 type url struct {
-	Url       string
-	ShortCode string
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	Url       string    `bson:"url,omitempty"`
+	ShortCode string    `bson:"shortcode,omitempty"`
+	CreatedAt time.Time `bson:"createdat,omitempty"`
+	UpdatedAt time.Time `bson:"updatedat,omitempty"`
 }
 
 type ShortenHandler struct{}
@@ -50,6 +50,7 @@ func (s *ShortenHandler) CreateShorten(w http.ResponseWriter, r *http.Request) {
 	collection, dberr := db.ConnectToCollection()
 	if dberr != nil {
 		fmt.Println("failed to connect to the db: ", dberr)
+		return
 	}
 
 	shortCode := generateShortCode()
@@ -69,13 +70,6 @@ func (s *ShortenHandler) CreateShorten(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(url)
 }
 
-type urlDb struct {
-	Url       string    `bson:"url,omitempty"`
-	ShortCode string    `bson:"shortcode,omitempty"`
-	CreatedAt time.Time `bson:"createdat,omitempty"`
-	UpdatedAt time.Time `bson:"updatedat,omitempty"`
-}
-
 func (s *ShortenHandler) GetShorten(w http.ResponseWriter, r *http.Request) {
 	shortCode := r.PathValue("shortcode")
 	if shortCode == "" {
@@ -90,7 +84,7 @@ func (s *ShortenHandler) GetShorten(w http.ResponseWriter, r *http.Request) {
 	}
 	filter := bson.D{{Key: "shortcode", Value: shortCode}}
 
-	var reqBody urlDb
+	var reqBody url
 	result := collection.FindOne(context.TODO(), filter).Decode(&reqBody)
 	if result != nil {
 		w.WriteHeader(400)
