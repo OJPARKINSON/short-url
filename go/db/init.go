@@ -16,7 +16,7 @@ func Init() {
 	}
 
 	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "shortCode", Value: -1}},
+		Keys:    bson.D{{Key: "shortcode", Value: -1}},
 		Options: options.Index().SetUnique(true),
 	}
 
@@ -25,6 +25,6 @@ func Init() {
 		fmt.Println("failed to create index in init script: ", err)
 	}
 
-	fmt.Println("creating index", result)
+	fmt.Println("index created: ", result)
 
 }

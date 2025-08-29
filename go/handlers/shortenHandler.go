@@ -17,7 +17,6 @@ type shortenReq struct {
 }
 
 type url struct {
-	Id        string
 	Url       string
 	ShortCode string
 	CreatedAt time.Time
@@ -27,25 +26,30 @@ type url struct {
 type ShortenHandler struct{}
 
 func (s *ShortenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		CreateShorten(w, r)
+	switch r.Method {
+	case http.MethodGet:
+		s.GetShorten(w, r)
+		return
+	case http.MethodPost:
+		s.CreateShorten(w, r)
 		return
 	}
 
 	w.WriteHeader(404)
 }
 
-func CreateShorten(w http.ResponseWriter, r *http.Request) {
-	collection, dberr := db.ConnectToCollection()
-	if dberr != nil {
-		fmt.Println("failed to connect to the db: ", dberr)
-	}
-
+func (s *ShortenHandler) CreateShorten(w http.ResponseWriter, r *http.Request) {
 	var reqBody shortenReq
 	err := json.NewDecoder(r.Body).Decode(&reqBody)
 	if err != nil {
 		fmt.Println("Error decoding body: ", err)
 		w.WriteHeader(400)
+		return
+	}
+
+	collection, dberr := db.ConnectToCollection()
+	if dberr != nil {
+		fmt.Println("failed to connect to the db: ", dberr)
 	}
 
 	shortCode := generateShortCode()
@@ -55,17 +59,47 @@ func CreateShorten(w http.ResponseWriter, r *http.Request) {
 	if insertErr != nil {
 		fmt.Println("Error inserting url: ", err)
 		w.WriteHeader(500)
-	} else if result.Acknowledged == false {
+	} else if !result.Acknowledged {
 		fmt.Println("insert not acknowledged: ", err)
 		w.WriteHeader(500)
 	}
 
-	url.Id = result.InsertedID.(bson.ObjectID).Hex()
-
-	fmt.Println(result.Acknowledged, result.InsertedID)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(201)
 	json.NewEncoder(w).Encode(url)
+}
+
+type urlDb struct {
+	Url       string    `bson:"url,omitempty"`
+	ShortCode string    `bson:"shortcode,omitempty"`
+	CreatedAt time.Time `bson:"createdat,omitempty"`
+	UpdatedAt time.Time `bson:"updatedat,omitempty"`
+}
+
+func (s *ShortenHandler) GetShorten(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortcode")
+	if shortCode == "" {
+		http.Error(w, "Short code required", http.StatusBadRequest)
+		return
+	}
+
+	collection, dberr := db.ConnectToCollection()
+	if dberr != nil {
+		http.Error(w, "Failed to connect to the DB", http.StatusInternalServerError)
+		return
+	}
+	filter := bson.D{{Key: "shortcode", Value: shortCode}}
+
+	var reqBody urlDb
+	result := collection.FindOne(context.TODO(), filter).Decode(&reqBody)
+	if result != nil {
+		w.WriteHeader(400)
+		http.Error(w, "Failed to find the short url", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(reqBody)
 }
 
 func generateShortCode() string {
@@ -73,7 +107,7 @@ func generateShortCode() string {
 	seed := rand.NewSource(time.Now().UnixNano())
 	random := rand.New(seed)
 
-	result := make([]byte, 6)
+	result := make([]byte, 10)
 	for i := range result {
 		result[i] = charset[random.Intn(len(charset))]
 	}

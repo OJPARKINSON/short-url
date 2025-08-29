@@ -1,0 +1,21 @@
+meta {
+  name: create-shorten
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://localhost:8090/shorten
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "url": "http://localhost:3000/hello"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

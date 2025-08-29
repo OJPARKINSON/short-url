@@ -20,6 +20,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/shorten", &handlers.ShortenHandler{})
+	mux.Handle("/shorten/{shortcode}", &handlers.ShortenHandler{})
 
 	log.Fatal(http.ListenAndServe(":8090", mux))
 }
