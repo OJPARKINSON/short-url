@@ -1,19 +1,13 @@
 meta {
-  name: update-shorten
+  name: delete-shorten
   type: http
-  seq: 3
+  seq: 5
 }
 
-post {
+delete {
   url: http://localhost:8090/shorten/hraaaisiwv
   body: json
   auth: inherit
-}
-
-body:json {
-  {
-    "url": "http://localhost:3000/hello"
-  }
 }
 
 settings {

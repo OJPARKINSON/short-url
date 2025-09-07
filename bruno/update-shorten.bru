@@ -1,13 +1,19 @@
 meta {
-  name: get-shorten
+  name: update-shorten
   type: http
-  seq: 1
+  seq: 3
 }
 
-get {
+put {
   url: http://localhost:8090/shorten/hraaaisiwv
-  body: none
+  body: json
   auth: inherit
+}
+
+body:json {
+  {
+    "url": "http://localhost:3000/hellooo0"
+  }
 }
 
 settings {

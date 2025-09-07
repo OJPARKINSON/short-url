@@ -21,6 +21,7 @@ func main() {
 
 	mux.Handle("/shorten", &handlers.ShortenHandler{})
 	mux.Handle("/shorten/{shortcode}", &handlers.ShortenHandler{})
+	mux.Handle("/shorten/{shortcode}/stats", &handlers.StatsHandler{})
 
 	log.Fatal(http.ListenAndServe(":8090", mux))
 }

@@ -17,11 +17,12 @@ type shortenReq struct {
 	URL string `json:"url"`
 }
 
-type url struct {
-	Url       string    `bson:"url,omitempty"`
-	ShortCode string    `bson:"shortcode,omitempty"`
-	CreatedAt time.Time `bson:"createdat,omitempty"`
-	UpdatedAt time.Time `bson:"updatedat,omitempty"`
+type Url struct {
+	Url         string    `bson:"url,omitempty"`
+	ShortCode   string    `bson:"shortcode,omitempty"`
+	CreatedAt   time.Time `bson:"createdat,omitempty"`
+	UpdatedAt   time.Time `bson:"updatedat,omitempty"`
+	AccessCount int       `bson:"accesscount,omitempty"`
 }
 
 type ShortenHandler struct{}
@@ -37,6 +38,8 @@ func (s *ShortenHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case http.MethodPut:
 		s.UpdateShorten(w, r)
 		return
+	case http.MethodDelete:
+		s.DeleteShorten(w, r)
 	}
 
 	w.WriteHeader(404)
@@ -58,7 +61,7 @@ func (s *ShortenHandler) CreateShorten(w http.ResponseWriter, r *http.Request) {
 	}
 
 	shortCode := generateShortCode()
-	url := url{Url: reqBody.URL, ShortCode: shortCode, CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	url := Url{Url: reqBody.URL, ShortCode: shortCode, CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	result, insertErr := collection.InsertOne(context.TODO(), url)
 	if insertErr != nil {
@@ -88,19 +91,30 @@ func (s *ShortenHandler) GetShorten(w http.ResponseWriter, r *http.Request) {
 	}
 	filter := bson.D{{Key: "shortcode", Value: shortCode}}
 
-	var reqBody url
-	result := collection.FindOne(context.TODO(), filter).Decode(&reqBody)
-	if result != nil {
-		if result == mongo.ErrNoDocuments {
-			http.Error(w, "Failed to find the short url", http.StatusNotFound)
+	var resBody Url
+
+	update := bson.D{
+		{Key: "$inc", Value: bson.D{{Key: "accesscount", Value: 1}}},
+		{Key: "$set", Value: bson.D{{Key: "updatedat", Value: time.Now()}}},
+	}
+	singleResult := collection.FindOneAndUpdate(context.TODO(), filter, update)
+	if !singleResult.Acknowledged {
+		http.Error(w, "Failed to update url", http.StatusInternalServerError)
+		return
+	}
+
+	err := singleResult.Decode(&resBody)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			http.Error(w, "Short URL not found", http.StatusNotFound)
 		} else {
-			http.Error(w, "Failed to get the document", http.StatusInternalServerError)
+			http.Error(w, "Failed to update URL", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(reqBody)
+	json.NewEncoder(w).Encode(resBody)
 }
 
 func (s *ShortenHandler) UpdateShorten(w http.ResponseWriter, r *http.Request) {
@@ -134,8 +148,8 @@ func (s *ShortenHandler) UpdateShorten(w http.ResponseWriter, r *http.Request) {
 
 	getFilter := bson.D{{Key: "shortcode", Value: shortCode}}
 
-	var getReqBody url
-	getResult := collection.FindOne(context.TODO(), getFilter).Decode(&getReqBody)
+	var resBody Url
+	getResult := collection.FindOne(context.TODO(), getFilter).Decode(&resBody)
 	if getResult != nil {
 		if getResult == mongo.ErrNoDocuments {
 			http.Error(w, "Failed to find the short url", http.StatusNotFound)
@@ -146,8 +160,32 @@ func (s *ShortenHandler) UpdateShorten(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(200)
-	json.NewEncoder(w).Encode(getReqBody)
+	json.NewEncoder(w).Encode(resBody)
 
+}
+
+func (s *ShortenHandler) DeleteShorten(w http.ResponseWriter, r *http.Request) {
+	shortCode := r.PathValue("shortcode")
+	if shortCode == "" {
+		http.Error(w, "Short code required", http.StatusBadRequest)
+		return
+	}
+
+	collection, dberr := db.ConnectToCollection()
+	if dberr != nil {
+		http.Error(w, "Failed to connect to the DB", http.StatusInternalServerError)
+		return
+	}
+
+	delFilter := bson.D{{Key: "shortcode", Value: shortCode}}
+
+	result, err := collection.DeleteOne(context.TODO(), delFilter)
+	if err != nil || !result.Acknowledged {
+		http.Error(w, "Failed to delete url", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func generateShortCode() string {
