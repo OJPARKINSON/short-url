@@ -2,13 +2,14 @@ using System;
 using System.CodeDom.Compiler;
 using API.Models;
 using Microsoft.AspNetCore.Http.HttpResults;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace API.Services;
 
 public interface IUrlService
 {
-    Task<string> CreateShortUrlAsync(string OriginalUrl);
+    Task<ShortUrl> CreateShortUrlAsync(string OriginalUrl);
     Task<string> GetOriginalUrlAsync(string ShortCode);
 }
 
@@ -21,7 +22,7 @@ public class UrlService : IUrlService
         _collection = database.GetCollection<ShortUrl>("urls");
     }
 
-    public async Task<String> CreateShortUrlAsync(string OriginalUrl)
+    public async Task<ShortUrl> CreateShortUrlAsync(string OriginalUrl)
     {
         // todo at url validation
 
@@ -31,18 +32,21 @@ public class UrlService : IUrlService
         {
             OriginalUrl = OriginalUrl,
             ShortCode = shortCode,
-            CreatedAt = new DateTime().ToLocalTime(),
-            UpdatedAt = new DateTime().ToLocalTime(),
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
             AccessCount = 0,
         };
 
+
         await _collection.InsertOneAsync(shortUrl);
 
-        return $"localhost:8090/{shortUrl.ShortCode}";
+        return shortUrl;
     }
     public async Task<String> GetOriginalUrlAsync(string shortCode)
     {
         var url = await _collection.Find(u => u.ShortCode == shortCode).FirstOrDefaultAsync();
+
+        Console.WriteLine(url);
 
         if (url == null)
         {

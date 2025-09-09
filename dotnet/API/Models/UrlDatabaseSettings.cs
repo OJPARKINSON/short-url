@@ -8,5 +8,5 @@ public class UrlDatabaseSettings
 
     public string DatabaseName { get; set; } = null!;
 
-    public string BooksCollectionName { get; set; } = null!;
+    public string CollectionName { get; set; } = null!;
 }
