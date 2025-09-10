@@ -25,6 +25,13 @@ public class UrlService : IUrlService
     public async Task<ShortUrl> CreateShortUrlAsync(string OriginalUrl)
     {
         // todo at url validation
+        var UriCreated = !Uri.TryCreate(OriginalUrl, UriKind.Absolute, out Uri validatedUri);
+        var UriValidated = validatedUri.Scheme == Uri.UriSchemeHttp || validatedUri.Scheme == Uri.UriSchemeHttps;
+
+        if (!UriCreated || !UriValidated)
+        {
+            throw new Exception("Invalid URL");
+        }
 
         var shortCode = GenerateShortCode();
 
