@@ -10,7 +10,7 @@ import (
 
 func Connect() (*mongo.Client, error) {
 	client, err := mongo.Connect(options.Client().
-		ApplyURI("mongodb://" + os.Getenv("CONNECTION_URL") + "/?compressors=snappy,zlib,zstd"))
+		ApplyURI("mongodb://" + os.Getenv("CONNECTION_URL") + "/?compressors=snappy,zlib,zstd&authSource=admin"))
 	if err != nil {
 		fmt.Println("Error decoding body: ", err)
 		return nil, err
